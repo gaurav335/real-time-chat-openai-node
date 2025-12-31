@@ -1,11 +1,6 @@
 import { Server } from "socket.io";
-import {
-  getAnswerFromTextFromStrem,
-} from "./services/chat.service.js";
-import {
-  finalizeAudio,
-  handleChunk,
-} from "./utils/audio.utils.js";
+import { getAnswerFromTextFromStrem } from "./services/chat.service.js";
+import { finalizeAudio, handleChunk } from "./utils/audio.utils.js";
 
 let io;
 
@@ -26,6 +21,7 @@ export const initSocket = (server) => {
       pcmChunks: [],
       lastTranscript: "",
       chunkCounter: 0,
+      audioSeq: 0,
     };
     socket.on("audio-chunk-with-voice", async (data) => {
       console.log("AUDIO RECIVER");

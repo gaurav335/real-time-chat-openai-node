@@ -15,7 +15,7 @@ export const getAnswerFromText = async (question) => {
   return response.choices[0].message.content.trim();
 };
 const MAX_CHARS = 45; // ~3 seconds speech
-const HARD_LIMIT = 70;      // safety cap
+const HARD_LIMIT = 70; // safety cap
 const SENTENCE_END = /[.!?\n]$/;
 export const getAnswerFromTextFromStrem = async (
   question,
@@ -71,12 +71,12 @@ export const getAnswerFromTextFromStrem = async (
     const flushText = shouldFlush(buffer);
     if (flushText) {
       buffer = buffer.slice(flushText.length);
-      await flush(flushText, socket, randomUid, isAudio);
+      flush(flushText, socket, randomUid, isAudio);
       buffer = "";
     }
   }
   if (buffer.trim()) {
-    await flush(buffer, socket, randomUid, isAudio);
+    flush(buffer, socket, randomUid, isAudio);
   }
   socket.emit("ai-audio-complete", { id: randomUid });
 };
@@ -112,7 +112,7 @@ async function flush(text, socket, id, isAudio) {
     return;
   }
 
-  await sendAudio(clean, socket, id);
+  sendAudio(clean, socket, id);
 }
 
 export const getAnswerFromTextToAudio = async (question, socket, randomUid) => {
@@ -142,6 +142,8 @@ export const getAnswerFromTextToAudio = async (question, socket, randomUid) => {
 };
 
 async function sendAudio(text, socket, id) {
+  const seq = socket.session.audioSeq++;
+
   const audio = await openai.audio.speech.create({
     model: "gpt-4o-mini-tts",
     voice: "alloy",
@@ -152,6 +154,7 @@ async function sendAudio(text, socket, id) {
 
   socket.emit("ai-audio-chunk", {
     id,
+    seq,
     text,
     role: "model",
     base64Audio: audioBuffer.toString("base64"),
