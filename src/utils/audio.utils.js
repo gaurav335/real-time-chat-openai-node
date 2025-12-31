@@ -87,7 +87,6 @@ async function transcribeAndEmit(socket, isFinal, isAudio) {
   const randomUid = Math.random().toString(36).substring(2, 32);
   if (isFinal) {
     console.log("ENter here ", {text});
-    
     await getAnswerFromTextFromStrem(text, socket, randomUid, isAudio);
   }
 }
