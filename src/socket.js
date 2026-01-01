@@ -40,7 +40,7 @@ export const initSocket = (server) => {
     });
 
     socket.on("disconnect", () => {
-      sessions.delete(socket.id);
+      socket.session.responses.delete(socket.id);
       console.log("Socket disconnected:", socket.id);
     });
   });
