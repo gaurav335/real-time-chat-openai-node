@@ -57,22 +57,55 @@ export async function processFullAudio(audioBuffer, socket, randomUid) {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 }
 
-export async function handleChunk(socket, data, isAudio) {
-  const pcm = Buffer.from(data);
-  socket.session.pcmChunks.push(pcm);
-  socket.session.chunkCounter++;
-  if (socket.session.chunkCounter % 10 === 0) {
-    await transcribeAndEmit(socket, false, isAudio);
+export async function handleChunk(socket, responseId, data, isAudio) {
+  // const pcm = Buffer.from(data);
+  // socket.session.pcmChunks.push(pcm);
+  // socket.session.chunkCounter++;
+  // if (socket.session.chunkCounter % 10 === 0) {
+  //   await transcribeAndEmit(socket, false, isAudio);
+  // }
+  if (!socket.session.responses.has(responseId)) {
+    socket.session.responses.set(responseId, {
+      pcmChunks: [],
+      chunkCounter: 0,
+      lastTranscript: "",
+      audioSeq: 0,
+    });
+  }
+  const responseSession = socket.session.responses.get(responseId);
+  responseSession.pcmChunks.push(Buffer.from(data));
+  responseSession.chunkCounter++;
+  if (responseSession.chunkCounter % 10 === 0) {
+    await transcribeAndEmit(socket, responseId, false, isAudio);
   }
 }
 
-export async function finalizeAudio(socket, isAudio) {
-  await transcribeAndEmit(socket, true, isAudio);
+export async function finalizeAudio(socket, responseId, isAudio) {
+  await transcribeAndEmit(socket, responseId, true, isAudio);
 }
 const openai = new OpenAI(openaiConfig);
 
-async function transcribeAndEmit(socket, isFinal, isAudio) {
-  const pcmBuffer = Buffer.concat(socket.session.pcmChunks);
+async function transcribeAndEmit(socket, responseId, isFinal, isAudio) {
+  // const pcmBuffer = Buffer.concat(socket.session.pcmChunks);
+  // const wavBuffer = createWavBuffer(pcmBuffer);
+  // const file = new File([wavBuffer], "audio.wav", {
+  //   type: "audio/wav",
+  // });
+  // const res = await openai.audio.transcriptions.create({
+  //   model: "gpt-4o-transcribe",
+  //   file,
+  // });
+  // const text = res.text || "";
+  // const newText = text.slice(socket.session.lastTranscript.length).trim();
+  // socket.session.lastTranscript = text;
+  // const randomUid = Math.random().toString(36).substring(2, 32);
+  // if (isFinal) {
+  //   console.log("ENter here ", { text });
+  //   await getAnswerFromTextFromStrem(text, socket, randomUid, isAudio);
+  // }
+  const responseSession = socket.session.responses.get(responseId);
+  if (!responseSession) return;
+  const pcmBuffer = Buffer.concat(responseSession.pcmChunks);
   const wavBuffer = createWavBuffer(pcmBuffer);
   const file = new File([wavBuffer], "audio.wav", {
     type: "audio/wav",
@@ -82,11 +115,11 @@ async function transcribeAndEmit(socket, isFinal, isAudio) {
     file,
   });
   const text = res.text || "";
-  const newText = text.slice(socket.session.lastTranscript.length).trim();
-  socket.session.lastTranscript = text;
+  const newText = text.slice(responseSession.lastTranscript.length).trim();
+  responseSession.lastTranscript = text;
   const randomUid = Math.random().toString(36).substring(2, 32);
   if (isFinal) {
-    console.log("ENter here ", {text});
-    await getAnswerFromTextFromStrem(text, socket, randomUid, isAudio);
+    console.log("ENter here ", { text });
+    await getAnswerFromTextFromStrem(text, socket, responseId, isAudio);
   }
 }

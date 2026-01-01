@@ -79,6 +79,7 @@ export const getAnswerFromTextFromStrem = async (
     flush(buffer, socket, randomUid, isAudio);
   }
   socket.emit("ai-audio-complete", { id: randomUid });
+  socket.session.responses.delete(randomUid);
 };
 
 function shouldFlush(text) {
@@ -142,7 +143,9 @@ export const getAnswerFromTextToAudio = async (question, socket, randomUid) => {
 };
 
 async function sendAudio(text, socket, id) {
-  const seq = socket.session.audioSeq++;
+  // const seq = socket.session.audioSeq++;
+  const responseSession = socket.session.responses.get(id);
+  const seq = responseSession.audioSeq++;
 
   const audio = await openai.audio.speech.create({
     model: "gpt-4o-mini-tts",

@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import { getAnswerFromTextFromStrem } from "./services/chat.service.js";
 import { finalizeAudio, handleChunk } from "./utils/audio.utils.js";
+import { sessions } from "./sessionStore.js";
 
 let io;
 
@@ -16,20 +17,18 @@ export const initSocket = (server) => {
       const randomUid = Math.random().toString(36).substring(2, 32);
       await getAnswerFromTextFromStrem(msg?.text, socket, randomUid);
     });
-
     socket.session = {
-      pcmChunks: [],
-      lastTranscript: "",
-      chunkCounter: 0,
-      audioSeq: 0,
+      responses: new Map(),
     };
     socket.on("audio-chunk-with-voice", async (data) => {
       console.log("AUDIO RECIVER");
-      handleChunk(socket, data?.chunk, true);
+      const { responseId, chunk } = data;
+      handleChunk(socket, responseId, chunk, true);
     });
-    socket.on("audio-end-with-voice", async () => {
+    socket.on("audio-end-with-voice", async (data) => {
       console.log("AUDIO END RECIVER");
-      await finalizeAudio(socket, true);
+      const { responseId } = data;
+      await finalizeAudio(socket, responseId, true);
     });
     socket.on("audio-chunk-with-text", async (data) => {
       console.log("AUDIO RECIVER TEXT");
@@ -41,6 +40,7 @@ export const initSocket = (server) => {
     });
 
     socket.on("disconnect", () => {
+      sessions.delete(socket.id);
       console.log("Socket disconnected:", socket.id);
     });
   });
